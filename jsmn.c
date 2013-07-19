@@ -33,27 +33,6 @@ static void jsmn_fill_token(jsmntok_t *token, jsmntype_t type,
 }
 
 /**
- * Estimate the number of JSON tokens in the string given.
- * It should return a number greater than or equal to the actual amount of items.
- * If the JSON string is malformed an incorrect number will be returned.
- * Of course if the malformed string is going to be parsed, then parsing
- * will fail anyway.
- */
-int jsmn_count_tokens(const char *json) {
-    int c = 1;
-    int i;
-    for(i=0;i<strlen(json);i++) {
-        if(json[i] == ':' ||
-                json[i] == ',' ||
-                json[i] == '[' ||
-                json[i] == '{') {
-            c++;
-        }
-    }
-    return c;
-}
-
-/**
  * Fills next available token with JSON primitive.
  */
 static jsmnerr_t jsmn_parse_primitive(jsmn_parser *parser, const char *js,
@@ -137,7 +116,19 @@ static jsmnerr_t jsmn_parse_string(jsmn_parser *parser, const char *js,
 					break;
 				/* Allows escaped symbol \uXXXX */
 				case 'u':
-					/* TODO */
+                    parser->pos++;
+                    int i=0;
+                    for(;i<4&&js[parser->pos] != '\0';i++) {
+                        // If it isn't a hex character we have an error
+                        if(!((js[parser->pos] >= 48 && js[parser->pos] <= 57) || // 0-9
+                                (js[parser->pos] >= 65 && js[parser->pos] <= 70) || // A-F
+                                (js[parser->pos] >= 97 && js[parser->pos] <= 102))) { // a-f
+                            parser->pos = start;
+                            return JSMN_ERROR_INVAL;
+                        }
+                        parser->pos++;
+                    }
+                    parser->pos--;
 					break;
 				/* Unexpected symbol */
 				default:
